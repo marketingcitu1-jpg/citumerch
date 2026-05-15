@@ -1,55 +1,53 @@
 @import url("https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap");
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
 
-@layer base {
-  :root {
-    --color-primary: #b81430;
-    --color-primary-dark: #96102a;
-    --color-bg-light: #f8f6f6;
-    --color-bg-dark: #211114;
-    --font-display: "Lexend", sans-serif;
-  }
+@import "tailwindcss";
 
-  * {
-    font-family: "Lexend", sans-serif;
-  }
-
-  .material-symbols-outlined {
-    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
-  }
-
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  ::-webkit-scrollbar-thumb {
-    background: #d1d5db;
-    border-radius: 999px;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: #b81430;
-  }
+@theme {
+  --color-primary: #b81430;
+  --color-primary-dark: #96102a;
+  --color-bg-light: #f8f6f6;
+  --color-bg-dark: #211114;
+  --font-display: "Lexend", sans-serif;
 }
 
-@layer components {
-  .nav-active {
-    background-color: rgba(184, 20, 48, 0.1);
-    color: #b81430;
-  }
+* {
+  font-family: "Lexend", sans-serif;
+}
 
-  .page-enter {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  .page-enter-active {
-    opacity: 1;
-    transform: translateY(0);
-    transition: opacity 200ms, transform 200ms;
-  }
+.material-symbols-outlined {
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #b81430;
+}
+
+/* Sidebar active link */
+.nav-active {
+  background-color: rgba(184, 20, 48, 0.1);
+  color: #b81430;
+}
+
+/* Smooth page transitions */
+.page-enter {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.page-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 200ms, transform 200ms;
 }
