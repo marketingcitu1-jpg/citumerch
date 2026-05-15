@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
-import api from '../api/axios';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 
 const mockItems = [
   { id: 1, icon: 'devices', name: 'Dell Latitude 5420', category: 'IT Equipment', qty: 12, price: 45000, status: 'IN_STOCK', location: 'IT Lab A', added: '2023-10-20' },
@@ -20,6 +21,7 @@ const statusLabel = { IN_STOCK: 'In Stock', LOW_STOCK: 'Low Stock', OUT_OF_STOCK
 const CATEGORIES = ['All Categories', 'IT Equipment', 'Furniture', 'Consumables', 'Office Supplies'];
 
 export default function OrdersPage() {
+  const { user } = useAuth();
   const [items, setItems] = useState(mockItems);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All Categories');
@@ -28,8 +30,37 @@ export default function OrdersPage() {
   const [form, setForm] = useState({ name: '', category: '', qty: '', price: '', location: '', status: 'IN_STOCK' });
 
   useEffect(() => {
-    api.get('/inventory').then(r => setItems(r.data)).catch(() => setItems(mockItems));
-  }, []);
+    const fetchItems = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('inventory_items')
+          .select('*')
+          .eq('user_id', user?.id)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        const transformedItems = data.map((item) => ({
+          id: item.id,
+          icon: 'inventory_2',
+          name: item.name,
+          category: item.category || 'Uncategorized',
+          qty: item.quantity,
+          price: item.price,
+          status: item.quantity > 50 ? 'IN_STOCK' : item.quantity > 0 ? 'LOW_STOCK' : 'OUT_OF_STOCK',
+          location: item.description || 'Unknown',
+          added: new Date(item.created_at).toISOString().split('T')[0],
+        }));
+
+        setItems(transformedItems);
+      } catch (err) {
+        console.log('[v0] Items fetch error:', err);
+        setItems(mockItems);
+      }
+    };
+
+    if (user) fetchItems();
+  }, [user]);
 
   const filtered = items.filter((i) => {
     const matchSearch = i.name.toLowerCase().includes(search.toLowerCase()) || i.category.toLowerCase().includes(search.toLowerCase());
@@ -42,22 +73,59 @@ export default function OrdersPage() {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    const payload = { ...form, qty: Number(form.qty), price: Number(form.price) };
+    const payload = { qty: Number(form.qty), price: Number(form.price), name: form.name, category: form.category, description: form.location, user_id: user?.id };
+    
     if (editItem) {
-      try { await api.put(`/inventory/${editItem.id}`, payload); } catch (_) {}
-      setItems((prev) => prev.map((i) => i.id === editItem.id ? { ...i, ...payload } : i));
+      try {
+        const { error } = await supabase
+          .from('inventory_items')
+          .update(payload)
+          .eq('id', editItem.id);
+
+        if (error) throw error;
+        setItems((prev) => prev.map((i) => i.id === editItem.id ? { ...i, ...form } : i));
+      } catch (err) {
+        console.log('[v0] Update error:', err);
+      }
     } else {
-      const newItem = { id: Date.now(), icon: 'inventory_2', ...payload, added: new Date().toISOString().split('T')[0] };
-      try { await api.post('/inventory', payload); } catch (_) {}
-      setItems((prev) => [newItem, ...prev]);
+      try {
+        const { data, error } = await supabase
+          .from('inventory_items')
+          .insert([payload])
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        const newItem = {
+          id: data.id,
+          icon: 'inventory_2',
+          ...form,
+          qty: Number(form.qty),
+          price: Number(form.price),
+          added: new Date().toISOString().split('T')[0],
+        };
+        setItems((prev) => [newItem, ...prev]);
+      } catch (err) {
+        console.log('[v0] Create error:', err);
+      }
     }
     setShowModal(false);
   };
 
   const handleDelete = async (id) => {
     if (!confirm('Delete this item?')) return;
-    try { await api.delete(`/inventory/${id}`); } catch (_) {}
-    setItems((prev) => prev.filter((i) => i.id !== id));
+    try {
+      const { error } = await supabase
+        .from('inventory_items')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      setItems((prev) => prev.filter((i) => i.id !== id));
+    } catch (err) {
+      console.log('[v0] Delete error:', err);
+    }
   };
 
   return (

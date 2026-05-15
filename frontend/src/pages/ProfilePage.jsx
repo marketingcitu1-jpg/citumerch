@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
 import { useAuth } from '../context/AuthContext';
-import api from '../api/axios';
+import { supabase } from '../lib/supabase';
 
 export default function ProfilePage() {
   const { user, logout } = useAuth();
@@ -24,9 +24,18 @@ export default function ProfilePage() {
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
-    try { await api.put('/auth/profile', form); } catch (_) {}
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    try {
+      const { error } = await supabase.from('profiles').update({
+        full_name: form.name,
+        role: form.role,
+      }).eq('id', user?.id);
+
+      if (error) throw error;
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      console.log('[v0] Profile update error:', err);
+    }
   };
 
   const handleChangePassword = async (e) => {
@@ -34,13 +43,18 @@ export default function ProfilePage() {
     setPwError('');
     if (pwForm.newPass.length < 8) { setPwError('New password must be at least 8 characters.'); return; }
     if (pwForm.newPass !== pwForm.confirm) { setPwError('Passwords do not match.'); return; }
+    
     try {
-      await api.put('/auth/change-password', { currentPassword: pwForm.current, newPassword: pwForm.newPass });
+      const { error } = await supabase.auth.updateUser({
+        password: pwForm.newPass,
+      });
+
+      if (error) throw error;
       setPwSuccess(true);
       setPwForm({ current: '', newPass: '', confirm: '' });
       setTimeout(() => setPwSuccess(false), 4000);
     } catch (err) {
-      setPwError(err.response?.data?.message || 'Failed to change password.');
+      setPwError(err.message || 'Failed to change password.');
     }
   };
 

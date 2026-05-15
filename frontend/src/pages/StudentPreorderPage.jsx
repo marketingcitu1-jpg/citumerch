@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../api/axios';
+import { supabase } from '../lib/supabase';
 
 const CATEGORIES = ['IT Equipment', 'Furniture', 'Consumables', 'Office Supplies', 'Books & Learning Materials', 'Uniforms & Apparel'];
 const mockItems = [
@@ -31,10 +31,20 @@ export default function StudentPreorderPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const payload = { ...form, items: cart.map((i) => i.name), totalAmount: total };
-    try { await api.post('/orders/student', payload); } catch (_) {}
-    setSubmitted(true);
-    setStep('success');
+    try {
+      const { error } = await supabase.from('student_preorders').insert([{
+        student_name: form.studentName,
+        student_email: form.email,
+        quantity: cart.length,
+        status: 'pending',
+      }]);
+
+      if (error) throw error;
+      setSubmitted(true);
+      setStep('success');
+    } catch (err) {
+      console.log('[v0] Preorder submission error:', err);
+    }
   };
 
   if (step === 'success') return (

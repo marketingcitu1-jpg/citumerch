@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
-import api from '../api/axios';
+import { supabase } from '../lib/supabase';
 
 const TABS = ['All', 'Pending', 'Paid', 'Claimed'];
 const mockOrders = [
@@ -17,7 +17,34 @@ export default function InventoryPage() {
   const [orders, setOrders] = useState(mockOrders);
 
   useEffect(() => {
-    api.get('/orders').then(r => setOrders(r.data)).catch(() => setOrders(mockOrders));
+    const fetchOrders = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('student_preorders')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        // Transform Supabase data to component format
+        const transformedOrders = data.map((order, idx) => ({
+          id: order.id,
+          name: order.student_name,
+          email: order.student_email,
+          studentId: `#STU-${String(idx + 1).padStart(5, '0')}`,
+          items: ['Reserved Item'],
+          date: new Date(order.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
+          status: order.status.toUpperCase(),
+        }));
+
+        setOrders(transformedOrders);
+      } catch (err) {
+        console.log('[v0] Orders fetch error:', err);
+        setOrders(mockOrders);
+      }
+    };
+
+    fetchOrders();
   }, []);
 
   const filtered = orders.filter((o) => {
@@ -29,8 +56,15 @@ export default function InventoryPage() {
 
   const handleClaim = async (id) => {
     try {
-      await api.put(`/orders/${id}/claim`);
-    } catch (_) {}
+      const { error } = await supabase
+        .from('student_preorders')
+        .update({ status: 'claimed' })
+        .eq('id', id);
+
+      if (error) throw error;
+    } catch (err) {
+      console.log('[v0] Claim error:', err);
+    }
     setOrders((prev) => prev.map((o) => o.id === id ? { ...o, status: 'CLAIMED' } : o));
   };
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
-import api from '../api/axios';
+import { supabase } from '../lib/supabase';
 
 const mockStats = { totalItems: 12482, lowStock: 24, pendingOrders: 156 };
 const mockAlerts = [
@@ -23,7 +23,29 @@ export default function DashboardPage() {
   const [stats, setStats] = useState(mockStats);
 
   useEffect(() => {
-    api.get('/dashboard/stats').then(r => setStats(r.data)).catch(() => setStats(mockStats));
+    const fetchStats = async () => {
+      try {
+        const [itemsRes, ordersRes] = await Promise.all([
+          supabase.from('inventory_items').select('*'),
+          supabase.from('orders').select('*').eq('status', 'pending'),
+        ]);
+
+        if (itemsRes.error) throw itemsRes.error;
+        if (ordersRes.error) throw ordersRes.error;
+
+        const lowStockItems = itemsRes.data.filter(item => item.quantity < 50).length;
+        setStats({
+          totalItems: itemsRes.data.length,
+          lowStock: lowStockItems,
+          pendingOrders: ordersRes.data.length,
+        });
+      } catch (err) {
+        console.log('[v0] Stats fetch error:', err);
+        setStats(mockStats);
+      }
+    };
+
+    fetchStats();
   }, []);
 
   return (
